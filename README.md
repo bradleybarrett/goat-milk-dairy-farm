@@ -1,4 +1,6 @@
-# blue-green-deployment-poc
+# goat-milk-dairy-farm
+
+# FYI: this readme needs some serious TLC - expect a readme worth reading soon!
 
 Build Spring App:
 ./gradlew build
