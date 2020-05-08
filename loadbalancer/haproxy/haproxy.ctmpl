@@ -1,0 +1,77 @@
+global
+    log 127.0.0.1   local0
+    log 127.0.0.1   local1 notice
+    debug
+    pidfile /run/haproxy.pid
+    stats timeout 30s
+    maxconn 1024
+
+defaults
+    log global
+    option httplog
+    mode http
+    timeout connect 10s
+    timeout client 30s
+    timeout server 30s
+
+frontend app_frontend
+    bind *:{{ or (env "HAPROXY_APP_TARGET_PORT") "8202" }}
+    use_backend app_backend
+
+{{/* The consul service call can return different results each time we call it. */ -}}
+{{- /* A service may appear for which there is no weight and a service with a weight may disappear. */ -}}
+{{- /* When a service disappears, the weights are invalid and need to be re-computed. To avoid this scenario... */ -}}
+{{- /* We must make one call to consul service and store the result for later processing. */ -}}
+
+{{- $appName := (env "APP_NAME") -}}
+{{- range $tag, $services := service $appName | byTag -}}
+    {{- if $tag | regexMatch "version=.*" -}}
+        {{- /* Store results from consul service call for later use. */ -}}
+        {{- scratch.MapSet "servicesByVersion" $tag $services -}}
+        {{- $version := $tag -}}
+        {{- $count := (len $services) -}}
+        {{- $weightConsulKey := (printf "%s/%s/weight" $appName $version) -}}
+        {{- /* Below call to fetch the weight from consul must be in a 'with' block to account for the empty input case of a nested api call during mutli-phase execution. See consul-template docs for details. */ -}}
+        {{- with $weight := (keyOrDefault $weightConsulKey "0") -}}
+            {{- $countWeight := (printf "%v:%s" $count $weight) -}}
+            {{- scratch.MapSet "countWeightByVersion" $version $countWeight -}}
+        {{- end -}}
+    {{- end -}}
+{{- end -}}
+
+{{- scratch.Get "countWeightByVersion" | explodeMap | toJSON | printf "-input=%s" |  plugin "compute-weights" | scratch.Set "computed-weights" -}}
+
+{{- range $versionWeight := scratch.Get "computed-weights" | split "," -}}
+    {{- range $index, $value := $versionWeight | split ":" -}}
+        {{- if eq $index 0 -}}
+            {{- scratch.Set "version" $value -}}
+        {{- else -}}
+            {{- scratch.Set "weight" $value -}}
+        {{- end -}}
+        {{- scratch.Set (printf "weight-%s" (scratch.Get "version")) (scratch.Get "weight") -}}
+    {{- end -}}
+{{- end -}}
+
+backend app_backend
+    mode http
+    balance roundrobin
+    cookie SERVERUSED insert indirect nocache
+    option httpchk GET /health
+    http-check expect status 200
+    {{- range $version, $services := scratch.Get "servicesByVersion" -}} 
+        {{- $weightKey := (printf "weight-%s" $version) -}}
+        {{- scratch.Set "weight" "0" -}}
+        {{- if scratch.Key $weightKey -}}
+            {{- scratch.Set "weight" (scratch.Get $weightKey) -}}
+        {{- end -}}
+        {{- range $service := $services }}
+    server {{.ID}} {{.Address}}:{{.Port}} check weight {{ scratch.Get "weight" }} cookie {{.ID}}
+        {{- end -}}
+    {{- end }}
+
+listen stats
+    bind *:{{ or (env "HAPROXY_STATS_TARGET_PORT") "8404" }}
+    stats enable
+    stats uri /monitor
+    stats refresh 5s
+    monitor-uri /health

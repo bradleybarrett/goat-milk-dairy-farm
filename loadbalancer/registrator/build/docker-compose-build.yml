@@ -1,0 +1,8 @@
+version: '3.3'
+
+services:
+  registrator:
+    image: ${REGISTRATOR_IMAGE_TAG}
+    build:
+      context: ../
+      dockerfile: build/Dockerfile

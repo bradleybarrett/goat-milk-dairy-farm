@@ -1,0 +1,16 @@
+spring:
+  cloud:
+    consul:
+      host: ${consul.host}
+      port: ${consul.port:8500}
+      discovery:
+        instanceId: ${spring.application.name}:${random.value}
+        serviceName: ${spring.application.name}
+        prefer-ip-address: true
+        ip-address: ${host.ip}
+        port: ${host.port}
+        tags: version=${version}
+        healthCheckPath: /health
+        healthCheckInterval: 15s
+      config:
+        enabled: true

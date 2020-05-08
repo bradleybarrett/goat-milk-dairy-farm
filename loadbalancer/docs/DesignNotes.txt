@@ -1,0 +1,272 @@
+Key learning this morning:
+    Use printf in go template to concat strings.
+    Pass concatenated string output as an argument to functions using a pipe.
+        The value passed is used as the last argument of the function.
+        This can make it tricky to read, but I think it is better than really long one-liners.
+
+
+Whats next...
+
+Will have one load balancer per service (one for farmer, one for goat).
+Load balancer has: 
+    - a single front end for the service name (provided as env variable to container? otherwise, need to harcode this in the lb template)
+        - has rule based on v
+    - one backend per version number of the service
+
+*** RANDY LIMITATION
+If you scale up to a point there you need another load balancer for a service, then you need a way to tell the load balancers to
+    be for a certain subset of all registered services up to some max value. This a point for future improvement that I will not
+    implement at this time.
+
+*** OVERALLL GOAL
+Goal is to autoscale services by starting a new instance (no manual load balancer changes needed).
+
+Because weights are not supported for haproxy front end, I will have to use backend weights to balance between service versions.
+This means that I'll have one backend for the service and the weights for each service determine how much traffic that service receives.
+
+Consul has numbers for each service version that deterine the relative amount of traffic going to a version of a service.
+
+In the consul template:
+The weight numbers are scaled to 100: X/SUM_WEIGHT_ALL_VERSIONS = S/100
+The weight for the service version is then computed as: if (SERVICE_VERSION_COUNT > 0) ? S/SERVICE_VERSION_COUNT : 0
+Store the weight for ther version in a map: (version, weight)
+Populate service weight based on value stored in the map for the service's version.
+
+
+To create version_weight_count string:
+    Use consul template byTag to group records (assume that the version is the only tag - would change this to metadata when that is support by spring cloud consul)
+    For each tag key,value pair in the map: 
+        -- $version: get version number from tag (split the string on equals and get the second element)
+        -- $count: get the length of the list value (len call on the value from the map)
+        -- $weight: lookup the consul weight for service version in the kv store (combine service and version number to get consul key)
+        -- now that you have the three values, concat them into a string ($verion:$weight:$count,)
+            append on to the end of the one string that will be used as the input to computeWeights()
+
+computeWeights(): convert weights from consul in to weight numbers for backend services
+    input: version_weight_count_string
+        version1:weight1:count1,
+        (version => version from consul for the service)
+        (weight => value of weight for service version in consul)
+        (count => instance count for service version)
+
+    output:
+        String version_weight_string
+            version1:weight1,version2:weight2,
+
+getWeightForVersion(): parse the weight for the version from the output string from function1
+    input: 
+        String version
+            version1
+        String version_weight_string
+            version1:weight1,version2:weight2
+    output: 
+        String weight
+            weight1
+
+consul: 
+        service1 has 4 registered instances: v1_1, v1_2, v2_1, v2_2
+        instances for v1 have tag version=1, instances for v2 have tag version=2
+        service version weight kvs:
+            service1/1:40
+            service1/2:60
+
+EXAMPLE:
+
+    backend service1
+        server v1_1 127.0.0.1:80 check weight 20
+        server v1_2 127.0.0.1:81 check weight 20
+        server v2_1 127.0.0.1:82 check weight 30
+        server v2_2 127.0.0.1:83 check weight 30
+
+IMPLEMENTATION:
+
+// STEP 1: Craft input data for weight computation plugin and store data from consul services call.
+
+    {{- range $tag, $services := service "alphaservice" | byTag -}}
+        {{- if $tag | regexMatch "version=.*" -}}
+            {{- /* Store results from consul service call for later use. */ -}}
+            {{- scratch.MapSet "servicesByVersion" $tag $services -}}
+            {{- $version := $tag -}}
+            {{- $count := (len $services) -}}
+            {{- $weightConsulKey := (printf "%s/%s/weight" "alphaservice" $version) -}}
+            {{- scratch.Set "weight" "0" -}}
+            {{- if keyExists $weightConsulKey -}}
+                {{- scratch.Set "weight" (key $weightConsulKey) -}}
+            {{- end -}}
+            {{- $weight := scratch.Get "weight" -}}
+            {{- scratch.MapSet "countWeightByVersion" $version (printf "%v:%s" $count $weight) -}}
+        {{- end -}}
+    {{- end -}}
+
+    {{ scratch.Get "countWeightByVersion" | explodeMap | toJSONPretty }}
+    
+    {
+        "version=0.0.0.1": "2:20",
+        "version=0.0.0.2": "1:0"
+    }
+
+// STEP 2: Pass input to weight computation plugin and store computed weights in scratch
+    
+    {{ scratch.GET "countWeightByVersion" | explodeMap | toJSON | plugin "compute-weights" | scratch.Set "computed-weights" }}
+    
+    "computed-weights": "version=0.0.0.1:50,version=0.0.0.2:0"
+
+// STEP 3: Create a map in scratch for the computed weights
+
+    {{- range $versionWeight := scratch.Get "computed-weights" | split "," -}}
+        {{- range $index, $value := $versionWeight | split ":" -}}
+            {{- if eq $index 0 -}}
+                {{- scratch.Set "version" $value -}}
+            {{- else -}}
+                {{- scratch.Set "weight" $value -}}
+            {{- end -}}
+            {{- scratch.Set (printf "weight-%s" (scratch.Get "version")) (scratch.Get "weight") -}}
+        {{- end -}}
+    {{- end -}}
+
+    [
+        "weight-version=0.0.0.1": "50",
+        "weight-version=0.0.0.2": "0"
+    ]
+
+// STEP 4: Create backend entries for each service with the appropriate weight
+
+    {{- range $version, $services := scratch.Get "servicesByVersion" -}} 
+        {{- $weightKey := (printf "weight-%s" $version) -}}
+        {{- scratch.Set "weight" "0" -}}
+        {{- if scratch.Key $weightKey -}}
+            {{- scratch.Set "weight" (scratch.Get $weightKey) -}}
+        {{- end -}}
+        {{- range $service := $services }}
+    server {{.ID}} {{.Address}}:{{.Port}} check weight {{ scratch.Get "weight" }} cookie {{.ID}}
+        {{- end -}}
+    {{- end }}
+
+    server alphaservice-58b4d0cb5c2d6351c2b5737096631d44 192.168.218.33:8090 check weight 50 cookie alphaservice-58b4d0cb5c2d6351c2b5737096631d44
+    server alphaservice-c2d73656798c98ceca5934204be542f4 192.168.218.33:8091 check weight 50 cookie alphaservice-c2d73656798c98ceca5934204be542f4
+    server alphaservice-d35e06d9c32b78748bc5789338b29f95 192.168.218.33:8092 check weight 0 cookie alphaservice-d35e06d9c32b78748bc5789338b29f95
+
+
+Example command to build the lb image:
+    docker build --build-arg app_name=alphaservice -t "bbarrett:lb-alpha-1-test" .
+
+Register lb with consul:
+    Will use the existing integration code written by Fabio LB.
+    Fabio is basically what I am building with more general features and blue/green support (but not canary support... I think).
+    
+    Fabio has utility go scripts to register a service with consul:
+        https://github.com/fabiolb/fabio/tree/master/registry/consul
+    
+    The register.go script that has two important methods: 
+        1) creates a ServiceRegistration (object used by consul go client).
+        2) registers the service with consul (using the provided registration info).
+        https://github.com/fabiolb/fabio/blob/master/registry/consul/register.go
+    
+    The register() and serviceRegistration() methods are used in backend.go in the Register() function.
+        https://github.com/fabiolb/fabio/blob/master/registry/consul/backend.go#L76-L81
+
+    I will copy these methods and tweak them as needed to create a go script that registers a service with consul.
+    There is one config enum in fabiolb for Consul that I will also need to copy/tweak:
+        https://github.com/fabiolb/fabio/blob/master/config/config.go#L138-L158
+
+    I'll need to make sure that I avoid any of the TLS stuff because I want to run without security for now.
+    I also need to understand the TTL stuff and the two check functions in the register script.
+    I will likely need to stand up http endpoints in my LB to serve as the health check endpoints provided in the consul registration.
+
+    NEW PLAN FOR LB REGISTRATION:
+        Will have a side-car image (lb-registrator) that will register the lb with consul and send heart beats for the registration.
+        To-dos:
+            Add a health rest endpoint to the lb (will be used by the registrator to check the health of the lb).
+            Create a GO script that registers the lb as a service in consul and sends heart beats at a ttl interval.
+                Script should use a number of command line args provided to the image entrypoint.
+                    consul host/port
+                    service name
+                    ttl for heartbeats
+                    lb host/port
+                    lb health endpoint url path
+                Should send a failed health check if the rest call to the lb does not return 200 status.
+            Create a dockerfile for the lb-registrator image.
+            Create a docker-compose file for the lb-registrator.
+            Create a .env file for the lb-registrator docker-compose file.
+
+NOTE: the docker .env file used for substitution in docker-compose.yml files must be located in the same
+    directory where the docker-compose command is executed. Also, the .env file is the only file that
+    can be used for substitution in docker-compose.yml files. Manually specified env-files create env variables
+    that are passed to the running container. Only .env can be used to relpace values in docker-compose.yml files.
+
+
+    Stuff to do:
+        Add health endpoint to lb (this will be)
+
+
+        1) Add health check endpoints to your LB (need to add http server)
+            Test: send request from postman to hit the endpoint and observe the response.
+            DONE: used the monitor-uri provided by ha-proxy for the health endpoint!   
+        2) Create registration script in go for your service (includes setting up a package manager!)
+            Test: run the script locally and see that it registers a service in consul.
+        3) Create an executable from the go registration script (add to build executables script)
+            Test: Run script and see the executable is created (will run it later when I try to test the lb).
+        4) Create a new side-car image (lb-registrator) to register the lb with consul.
+            The image should accept run time args for:
+                consul host/port
+                service name
+                ttl for heartbeats
+                lb host/port
+                lb health endpoint url path
+            Modify your registration script as needed to accept these parameters.
+
+
+        2) Create registration script in go using Fabio code.
+            Test: Start LB and run registration script locally - observe the registration present in consul.
+        3) Create an executable from the go registration script (add to build executables script)
+            Test: Run script and see the executable is created (will run it later when I try to test the lb).
+        4) Add the registration executable to the dockerfile for my LB and verify that it works.
+            Test: Build and start the LB image and see that it registers with consul.
+        5) Make sure that multiple LBs can be registered at once.
+            Test: start a second LB with a different port and see that it also registers successfully.
+
+
+Gonsul:
+
+    Ok, so getting gonsul running in a container is harder than I thought because it needs ssh keys at runtime.
+    Storing the ssh key in the docker image is a serious security issue.
+    Gonsul only needs the ssh key at runtime (not at build time), so I need a way to provide the ssh key to the running container.
+    For now, I'll assume that the ssh key will be installed on the host running the gonsul container.
+    I will share the ssh key with the running container using a docker volume.
+    Docker volumes are how a container and host (or two containers) can share files.
+    I will also use a volume as the source directory where consul will clone the kvstore repo.
+    I will create my volume at runtime using docker-compose.
+    This will make it easy for me to run gonsul as a container on my local machine (or in production).
+    On a blank VM in production, CI scripts would need to: 1) create an ssh, 2)register the public key with the git repo, 3) run the consul container and create the appropriate volume.
+
+./gonsul/build/executables/osx/gonsul-osx --strategy=HOOK --log-level=DEBUG --consul-url=http://10.0.0.16:8500 --repo-url=git@gitlab.captechlab.com:bbarrett/blue-green-deployment-poc.git --repo-ssh-key=/Users/bbarrett/.ssh/id_rsa --repo-ssh-user=git --repo-branch=dev/compute-weights --repo-base-path=loadbalancer/kvstore --repo-root=/Users/bbarrett/Desktop/gonsul --expand-json=true --allow-deletes=true
+
+
+--log-level=DEBUG 
+--consul-url=http://10.0.0.6:8500 
+--strategy=HOOK 
+--repo-url=git@gitlab.captechlab.com:bbarrett/blue-green-deployment-poc.git 
+--repo-ssh-key=~/.ssh/id_rsa 
+--repo-ssh-user=git 
+--repo-branch=dev/compute-weights 
+--repo-base-path=loadbalancer/kvstore 
+--repo-root=~/Desktop/gonsul 
+--expand-json=true 
+--allow-deletes=true
+
+
+ ./gonsul/build/executables/osx/gonsul-osx --log--repo-url=git@gitlab.captechlab.com:bbarrett/blue-green-deployment-poc.git --repo-ssh-key=/Users/bbarrett/.ssh/id_rsa --repo-ssh-user=git --repo-branch=dev/compute-weights --repo-base-path=loadbalancer/kvstore --repo-root=/Users/bbarrett/Desktop/gonsul --expand-json=true --allow-deletes=true
+
+./gonsul/build/executables/osx/gonsul-osx 
+--strategy=HOOK 
+--log-level=DEBUG 
+--consul-url=http://10.0.0.16:8500
+--repo-url=git@gitlab.captechlab.com:bbarrett/blue-green-deployment-poc.git 
+--repo-ssh-key=/Users/bbarrett/.ssh/id_rsa 
+--repo-ssh-user=git 
+--repo-branch=dev/compute-weights 
+--repo-base-path=loadbalancer/kvstore 
+--repo-root=/Users/bbarrett/Desktop/gonsul 
+--expand-json=true 
+--allow-deletes=true
+    

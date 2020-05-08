@@ -1,0 +1,84 @@
+version: '3.3'
+
+networks:
+  
+  lb-goat:
+    driver: bridge
+
+services:
+  
+  loadbalancer:
+    image: ${LB_IMAGE_TAG}
+    command: '-config=/tmp/haproxy.hcl -consul-addr=${CONSUL_ADDR}'
+    ports:
+      - target: 8202
+        published: ${HAPROXY_APP_PORT}
+        mode: host
+      - target: 8404
+        published: ${HAPROXY_STATS_PORT}
+        mode: host
+    environment:
+      - APP_NAME=${APP_NAME}
+    labels:
+      com.bbarrett.loadbalancer.service: ${APP_NAME}
+    networks:
+      - lb-${APP_NAME}
+
+  registrator:
+    image: ${REGISTRATOR_IMAGE_TAG}
+    command: > 
+      -health-addr=loadbalancer:${HAPROXY_STATS_PORT}
+      -health-url-path=/health
+      -consul-addr=${CONSUL_ADDR}
+      -registration-name=lb-${APP_NAME}
+      -registration-addr=${HOST_IP}:${HAPROXY_APP_PORT}
+      -registration-ttl=${REGISTRATION_TTL}
+    labels:
+      com.bbarrett.registrator.loadbalancer: loadbalancer:${HAPROXY_APP_PORT}-lb-${APP_NAME}
+    networks:
+      - lb-${APP_NAME}
+
+  gonsul:
+    image: ${GONSUL_IMAGE_TAG}
+    command: >
+      --consul-url=http://${CONSUL_ADDR}
+      --strategy=POLL
+      --poll-interval=5
+      --log-level=INFO
+      --repo-url=${CONFIG_REPO_URL}
+      --repo-branch=${CONFIG_REPO_BRANCH}
+      --repo-base-path=${CONFIG_REPO_BASE_PATH}
+      --repo-ssh-key=/root/.ssh/id_rsa 
+      --repo-ssh-user=git 
+      --repo-root=/gonsul 
+      --expand-json=true 
+      --allow-deletes=true
+    ports:
+      - target: 8000
+        published: ${GONSUL_PORT}
+        mode: host
+    labels:
+      com.bbarrett.gonsul.consul: ${CONSUL_ADDR}
+      com.bbarrett.gonsul.repo.url: ${CONFIG_REPO_URL}
+      com.bbarrett.gonsul.repo.branch: ${CONFIG_REPO_BRANCH}
+      com.bbarrett.gonsul.repo.basepath: ${CONFIG_REPO_BASE_PATH}
+    volumes:
+      - type: bind
+        source: ~/.ssh
+        target: /root/.ssh
+        read_only: true
+
+  consul:
+    image: consul:latest
+    command: 'agent -server -bootstrap -ui -client=0.0.0.0'
+    ports:
+      - target: 8400
+        published: 8400
+        mode: host
+      - target: 8500
+        published: 8500
+        mode: host
+      - target: 8600
+        published: 8600
+        protocol: udp
+        mode: host
