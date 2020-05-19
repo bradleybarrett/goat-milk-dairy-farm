@@ -6,7 +6,7 @@
    * [Populating the service registry](#4-1)
    * [Populating routing rules](#4-2)
    * [Location of load balancing decision](#4-3)
-* [Implementation patterns of well-known tools](#5)
+* [Implementation Patterns of Well-Known Tools](#5)
    * [Kubernetes](#5-1)
    * [Istio](#5-2)
    * [Netflix Eureka + Ribbon](#5-3)
@@ -20,7 +20,9 @@ The project implements a dairy farm that produces bottles of milk. Each incoming
 
 These labels are important because they change as milk requests are loadbalanced across the farmers and goats. Also, "Goat Milk?" Dairy Farm, is all about that farm-to-table.
 
-The diary farm has multiple instances of farmers and goats, each with a service name and version number. Ex: farmer-v1, goat-v1, goat-v2. Internal load balancing is implemented to allow service-level canary deployments by service name and version. A routing weight can be assigned to each service-version pair. Routing rules are automically updated when services start and stop.
+The diary farm has multiple instances of farmers and goats, each with a service name and version number. Ex: farmer-v1, goat-v1, goat-v2. 
+
+Internal load balancing is implemented to allow service-level canary deployments by service name and version. A routing weight can be assigned to each service-version pair. Routing rules are automically updated as services scale up and down.
 
 For example, introducing a new goat is easy: start the goat with the new version number and update the service-version routing weight to a non-zero value. To stop routing traffic to all services of a specific version, set the service-version routing weight to zero.
 
@@ -42,7 +44,7 @@ See the section on deployment pipeline features to see what's included in diary 
 * Registration side-car containers register each loadbalancer with consul. As a result, the loadbalancer address is flexible and client-side load balancing can be implemented to support redundant loadbalncers for each service.
 * This load balancing implementation attempts to externalize all routing logic from the application services (hence the use of server-side load balancing).
 
-Note: There a pros and cons to each load balancing implementation pattern. See the section load balancing implementation patterns for the patterns types, examples from well-known tools, and the pattern used for the dairy farm.
+Note: There a pros and cons to each load balancing implementation pattern. See the section load balancing implementation patterns for the patterns types, examples from well-known tools, and the pattern used by this dairy farm.
 
 TODO: add a block diagram here!!
 ```
@@ -109,7 +111,7 @@ Implementation options for each load balancing element:
 
 Existing load balancing implementations exhibit some combination of these elements.
 
-## Implementation patterns of well-known tools (and this project) <a name="5"></a>
+## Implementation Patterns of Well-Known Tools (and this project) <a name="5"></a>
 
 #### Kubernetes <a name="5-1"></a>
 1. Populate service registry
