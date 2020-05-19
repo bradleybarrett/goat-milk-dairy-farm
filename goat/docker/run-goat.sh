@@ -1,5 +1,5 @@
 #!/bin/bash
-localhost=10.100.41.156
+localhost=192.168.1.95
 serverPort=8101
 
 port=$serverPort

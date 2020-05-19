@@ -55,7 +55,7 @@ frontend app_frontend
 backend app_backend
     mode http
     balance roundrobin
-    cookie SERVERUSED insert indirect nocache
+    {{/* cookie SERVERUSED insert indirect nocache */ -}}
     option httpchk GET /health
     http-check expect status 200
     {{- range $version, $services := scratch.Get "servicesByVersion" -}} 

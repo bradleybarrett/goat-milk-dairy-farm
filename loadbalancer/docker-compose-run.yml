@@ -68,17 +68,17 @@ services:
         target: /root/.ssh
         read_only: true
 
-  consul:
-    image: consul:latest
-    command: 'agent -server -bootstrap -ui -client=0.0.0.0'
-    ports:
-      - target: 8400
-        published: 8400
-        mode: host
-      - target: 8500
-        published: 8500
-        mode: host
-      - target: 8600
-        published: 8600
-        protocol: udp
-        mode: host
+  # consul:
+  #   image: consul:latest
+  #   command: 'agent -server -bootstrap -ui -client=0.0.0.0'
+  #   ports:
+  #     - target: 8400
+  #       published: 8400
+  #       mode: host
+  #     - target: 8500
+  #       published: 8500
+  #       mode: host
+  #     - target: 8600
+  #       published: 8600
+  #       protocol: udp
+  #       mode: host

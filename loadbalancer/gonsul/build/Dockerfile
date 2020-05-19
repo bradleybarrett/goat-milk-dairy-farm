@@ -1,6 +1,7 @@
-FROM alpine:3.11.2
+FROM alpine
 LABEL Description="Runs a gonsul instance to persist values from git to consul" Version="0.1"
 
+# Copy the gonsul executable and edit the file permissions to be executable
 COPY ./build/executables/gonsul /usr/bin/gonsul
 RUN chmod +x /usr/bin/gonsul
 
