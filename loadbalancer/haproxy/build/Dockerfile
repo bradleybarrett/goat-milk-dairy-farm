@@ -25,13 +25,32 @@ COPY --from=gobuilder /build/compute-weights /go/bin/compute-weights
 # Add the /go/bin directory to the path so consul-template can find the executable
 ENV PATH /go/bin:$PATH
 
-COPY ./haproxy_reload.sh /run/haproxy_reload.sh
-RUN chmod +x /run/haproxy_reload.sh
+RUN mkdir -p /var/haproxy && chmod 0 /var/haproxy
+WORKDIR /var/haproxy
 
-RUN touch /run/haproxy.sock
-RUN touch /run/haproxy.pid
-COPY ./haproxy.hcl /tmp/haproxy.hcl
-COPY ./haproxy.ctmpl /tmp/haproxy.ctmpl
+# Files used by consul-template to configure and run haproxy
+COPY ./haproxy_reload.sh ./tmp/haproxy_reload.sh
+COPY ./haproxy.hcl ./tmp/haproxy.hcl
+COPY ./haproxy.ctmpl ./tmp/haproxy.ctmpl
+
+# Files used by haproxy to store runtime info
+RUN mkdir ./run && chmod 0 /run
+RUN touch ./run/haproxy.sock
+RUN touch ./run/haproxy.pid
+
+# Create a user for consul-template, haproxy will be started in a separate process by this user/group
+RUN addgroup -S consul-template && adduser -S consul-template -G consul-template
+
+# Give consul-template (and ultimately haproxy) appropriate permission to the resource directory
+# traverse directory, traverse its sub folders, rw- /run files, r-- /tmp files, r-x /tmp.sh files
+RUN chown consul-template:consul-template -R . \
+  && chmod 700 . \
+  && chmod 700 $(find . -type d) \
+  && chmod 600 $(find ./run/ -type f) \
+  && chmod 400 $(find ./tmp/ -type f) \
+  && chmod 500 $(find ./tmp/ -type f -name "*.sh")
+
+USER consul-template
 
 # Environment variables that can be provided to the running container.
 # These variables are used in the template for the haproxy frontend and backend definitions.

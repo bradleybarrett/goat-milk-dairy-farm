@@ -9,7 +9,7 @@ services:
   
   loadbalancer:
     image: ${LB_IMAGE_TAG}
-    command: '-config=/tmp/haproxy.hcl -consul-addr=${CONSUL_ADDR}'
+    command: '-config=/var/haproxy/tmp/haproxy.hcl -consul-addr=${CONSUL_ADDR}'
     ports:
       - target: 8202
         published: ${HAPROXY_APP_PORT}

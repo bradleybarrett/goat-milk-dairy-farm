@@ -1,5 +1,5 @@
 template {
-  source = "/tmp/haproxy.ctmpl"
-  destination = "/etc/haproxy/haproxy.cfg"
-  command = "./run/haproxy_reload.sh"
+  source = "/var/haproxy/tmp/haproxy.ctmpl"
+  destination = "/var/haproxy/etc/haproxy/haproxy.cfg"
+  command = "./tmp/haproxy_reload.sh"
 }

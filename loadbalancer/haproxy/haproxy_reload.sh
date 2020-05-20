@@ -3,9 +3,14 @@
 [ -n "${DEBUG}" ] && set -x
 
 echo "$0: Running reload script"
+#TODO: put this in an env variable, created in the dockerfile
+haproxyHome=/var/haproxy
 
-previousConfig=/etc/haproxy/haproxy.cfg.previous
-newConfig=/etc/haproxy/haproxy.cfg
+previousConfig=${haproxyHome}/etc/haproxy/haproxy.cfg.previous
+newConfig=${haproxyHome}/etc/haproxy/haproxy.cfg
+
+pidFile=${haproxyHome}/run/haproxy.pid
+sockFile=${haproxyHome}/run/haproxy.sock
 
 # first start
 if [ ! -f ${previousConfig} ]; then
@@ -17,10 +22,10 @@ fi
 
 # trigger a reload if the configuration has changed
 if ! $(cmp -s ${newConfig} ${previousConfig}); then
-  if [ -S /run/haproxy.sock ]; then
-    echo "show servers state" | socat /run/haproxy.sock - > /haproxy.serverstates
+  if [ -S ${sockFile} ]; then
+    echo "show servers state" | socat ${sockFile} - > ${haproxyHome}/haproxy.serverstates
   fi
-  prevConfigPid=$(cat /run/haproxy.pid)
+  prevConfigPid=$(cat ${pidFile})
   echo "$0: Configuration has changed."
   echo "$0: Start a process with the new config and... "
   echo "$0: Send a soft kill signal to the process running the previous config (pid=${prevConfigPid})."
