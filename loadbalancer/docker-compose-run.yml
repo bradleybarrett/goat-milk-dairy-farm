@@ -48,10 +48,10 @@ services:
       --repo-url=${CONFIG_REPO_URL}
       --repo-branch=${CONFIG_REPO_BRANCH}
       --repo-base-path=${CONFIG_REPO_BASE_PATH}
-      --repo-ssh-key=/root/.ssh/id_rsa 
-      --repo-ssh-user=git 
-      --repo-root=/gonsul 
-      --expand-json=true 
+      --repo-ssh-key=/home/gonsul/.ssh/id_rsa
+      --repo-ssh-user=git
+      --repo-root=/home/gonsul/tmp
+      --expand-json=true
       --allow-deletes=true
     ports:
       - target: 8000
@@ -65,7 +65,7 @@ services:
     volumes:
       - type: bind
         source: ~/.ssh
-        target: /root/.ssh
+        target: /tmp/.ssh
         read_only: true
 
   # consul:
