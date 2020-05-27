@@ -10,7 +10,7 @@ RUN addgroup -S gonsul && adduser --home /home/gonsul -S gonsul -G gonsul
 # Copy executables and modify permissions as needed.
 # Gonsul executable retrieved from: https://github.com/miniclip/gonsul/releases
 WORKDIR /usr/local/bin
-COPY ./build/gonsul ./gonsul
+COPY ./gonsul ./gonsul
 COPY ./build/docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod 755 ./docker-entrypoint.sh 
 
