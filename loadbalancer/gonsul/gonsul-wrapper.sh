@@ -26,12 +26,12 @@ pollConsulServer()
 {
     local waitPeriod=2 # seconds
     local timeElapsed=0 # seconds
-
+    
     while [ $(pingConsulServer $1) != "200" ];
     do
-    echo "Waiting for consul server at ${1}, time elapsed: ${timeElapsed}s"
-    timeElapsed=$((timeElapsed + $waitPeriod))
-    sleep $waitPeriod;
+        echo "Waiting for consul server at ${1}, time elapsed: ${timeElapsed}s"
+        timeElapsed=$((timeElapsed + $waitPeriod))
+        sleep $waitPeriod;
     done
 
     echo "Consul server is UP at ${1}"
