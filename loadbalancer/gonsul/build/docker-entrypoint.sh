@@ -13,9 +13,9 @@ chown -R ${user}:${user} ${home}/.ssh
 
 # If the first arg looks like a flag, assume we want to run gonsul server.
 if [ "${1:0:1}" = '-' ]; then
-    # Prefix the input command args with the gonsul command.
-    set -- gonsul "$@"
+    # Prefix the input command args with the gonsul-wrapper executable
+    set -- gonsul-wrapper.sh "$@"
 fi
 
-# Run gonsul in the container as a non-root user.
+# Run gonsul-wrapper in the container as a non-root user.
 exec su-exec ${user}:${user} "$@"
