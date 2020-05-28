@@ -21,13 +21,19 @@ pingConsulServer()
     echo $(curl -s -o /dev/null -w %{http_code} --connect-timeout ${timeout} "${1}/v1/status/leader")
 }
 
+getClusterLeader()
+{
+    local timeout=1 # seconds
+    echo $(curl -s --connect-timeout ${timeout} "${1}/v1/status/leader" | tr -d '"')
+}
+
 # Poll mock server running on the provided port: ex. pollConsulServer http://localhost:8500
-pollConsulServer()
+waitForConsulServer()
 {
     local waitPeriod=2 # seconds
     local timeElapsed=0 # seconds
     
-    while [ $(pingConsulServer $1) != "200" ];
+    while [ $(pingConsulServer $1) != "200" ] || [ -z $(getClusterLeader $1) ];
     do
         echo "Waiting for consul server at ${1}, time elapsed: ${timeElapsed}s"
         timeElapsed=$((timeElapsed + $waitPeriod))
@@ -38,7 +44,7 @@ pollConsulServer()
 }
 
 # Wait for consul to start
-pollConsulServer ${consulAddr}
+waitForConsulServer ${consulAddr}
 
 # Run gonsul with the provided commands.
 gonsul ${gonsulArgs}
