@@ -56,8 +56,8 @@ goats
 
 ## Deployment Pipeline Features <a name="3"></a>
 
-Ideally, everything in this list should be automated - even the commits to git which update the deployment config!
-Automation and resource management is where cloud native tools/pipelines and orchestration tools really come in handy.
+Ideally, everything in this list would be automated - even the commits to git which update the deployment config!
+Automation and resource management is where cloud native pipelines and orchestration tools really come in handy.
 
 | Deployment Feature | Implementation Status    |
 | :---               | :---                     |
