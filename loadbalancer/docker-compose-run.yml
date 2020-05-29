@@ -1,42 +1,78 @@
 version: '3.3'
 
 networks:
-  
-  lb-goat:
+
+  lb-goat-network:
+    driver: bridge
+    
+  lb-farmer-network:
     driver: bridge
 
 services:
   
-  loadbalancer:
+  lb-goat:
     image: ${LB_IMAGE_TAG}
     command: '-config=/var/haproxy/tmp/haproxy.hcl -consul-addr=${CONSUL_ADDR}'
     ports:
       - target: 8202
-        published: ${HAPROXY_APP_PORT}
+        published: ${GOAT_HAPROXY_APP_PORT}
         mode: host
       - target: 8404
-        published: ${HAPROXY_STATS_PORT}
+        published: ${GOAT_HAPROXY_STATS_PORT}
         mode: host
     environment:
-      - APP_NAME=${APP_NAME}
+      - APP_NAME=${GOAT_APP_NAME}
     labels:
-      com.bbarrett.loadbalancer.service: ${APP_NAME}
+      com.bbarrett.loadbalancer.service: ${GOAT_APP_NAME}
     networks:
-      - lb-${APP_NAME}
+      - lb-${GOAT_APP_NAME}-network
 
-  registrator:
+  registrator-goat:
     image: ${REGISTRATOR_IMAGE_TAG}
     command: > 
-      -health-addr=loadbalancer:${HAPROXY_STATS_PORT}
+      -health-addr=lb-goat:8404
       -health-url-path=/health
       -consul-addr=${CONSUL_ADDR}
-      -registration-name=lb-${APP_NAME}
-      -registration-addr=${HOST_IP}:${HAPROXY_APP_PORT}
+      -registration-name=lb-${GOAT_APP_NAME}
+      -registration-addr=${HOST_IP}:${GOAT_HAPROXY_APP_PORT}
       -registration-ttl=${REGISTRATION_TTL}
     labels:
-      com.bbarrett.registrator.loadbalancer: loadbalancer:${HAPROXY_APP_PORT}-lb-${APP_NAME}
+      com.bbarrett.registrator.name: lb-${GOAT_APP_NAME}
+      com.bbarrett.registrator.address: ${HOST_IP}:${GOAT_HAPROXY_APP_PORT}
     networks:
-      - lb-${APP_NAME}
+      - lb-${GOAT_APP_NAME}-network
+
+  lb-farmer:
+    image: ${LB_IMAGE_TAG}
+    command: '-config=/var/haproxy/tmp/haproxy.hcl -consul-addr=${CONSUL_ADDR}'
+    ports:
+      - target: 8202
+        published: ${FARMER_HAPROXY_APP_PORT}
+        mode: host
+      - target: 8404
+        published: ${FARMER_HAPROXY_STATS_PORT}
+        mode: host
+    environment:
+      - APP_NAME=${FARMER_APP_NAME}
+    labels:
+      com.bbarrett.loadbalancer.service: ${FARMER_APP_NAME}
+    networks:
+      - lb-${FARMER_APP_NAME}-network
+
+  registrator-farmer:
+    image: ${REGISTRATOR_IMAGE_TAG}
+    command: > 
+      -health-addr=lb-farmer:8404
+      -health-url-path=/health
+      -consul-addr=${CONSUL_ADDR}
+      -registration-name=lb-${FARMER_APP_NAME}
+      -registration-addr=${HOST_IP}:${FARMER_HAPROXY_APP_PORT}
+      -registration-ttl=${REGISTRATION_TTL}
+    labels:
+      com.bbarrett.registrator.name: lb-${FARMER_APP_NAME}
+      com.bbarrett.registrator.address: ${HOST_IP}:${FARMER_HAPROXY_APP_PORT}
+    networks:
+      - lb-${FARMER_APP_NAME}-network
 
   gonsul:
     image: ${GONSUL_IMAGE_TAG}

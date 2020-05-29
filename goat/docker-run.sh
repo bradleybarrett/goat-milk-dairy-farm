@@ -35,4 +35,10 @@ while [ "$1" != "" ]; do
     shift
 done
 
-docker run -d -p $port:$serverPort bbarrett/goat:latest --host.ip=$host --host.port=$port --consul.host=$consulHost --version=$version
+docker run -d \
+    -p $port:$serverPort \
+    bbarrett/goat:latest \
+    --host.ip=$host \
+    --host.port=$port \
+    --consul.host=$consulHost \
+    --version=$version

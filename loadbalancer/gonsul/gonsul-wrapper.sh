@@ -33,7 +33,7 @@ waitForConsulServer()
     local waitPeriod=2 # seconds
     local timeElapsed=0 # seconds
     
-    while [ $(pingConsulServer $1) != "200" ] || [ -z $(getClusterLeader $1) ];
+    while [ -z $(getClusterLeader $1) ];
     do
         echo "Waiting for consul server at ${1}, time elapsed: ${timeElapsed}s"
         timeElapsed=$((timeElapsed + $waitPeriod))

@@ -46,6 +46,7 @@ func (s *Service) check() (bool, error) {
 	/* Send an http request to the service health endpoint. */
 	resp, err := http.Get(endpoint)
 	if err != nil {
+		log.Println(fmt.Sprintf("Failed to get response for endpoint %s", endpoint))
 		return false, err
 	}
 	defer resp.Body.Close()

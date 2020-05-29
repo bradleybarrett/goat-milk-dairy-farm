@@ -1,5 +1,5 @@
 #!/bin/bash
-localhost=10.100.41.156
+localhost=192.168.1.95
 serverPort=8091
 
 port=$serverPort
@@ -35,4 +35,10 @@ while [ "$1" != "" ]; do
     shift
 done
 
-docker run -d -p $port:$serverPort bbarrett/farmer:latest --host.ip=$host --host.port=$port --consul.host=$consulHost --version=$version
+docker run -d \
+    -p $port:$serverPort \
+    bbarrett/farmer:latest \
+    --host.ip=$host \
+    --host.port=$port \
+    --consul.host=$consulHost \
+    --version=$version
