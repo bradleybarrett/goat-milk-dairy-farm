@@ -62,7 +62,7 @@ Build the images for the goat and farmer applications:
 #### Set Environment Variables <a name="2-2"></a>
 
 Set environment variables for your local machine:
-* Replace <your-host-ip> with the ip address of your machine:
+* Replace "your-host-ip" with the ip address of your machine:
 ex. if your host IP is 10.0.0.20
 ```
 CONSUL_ADDR=10.0.0.20:8500
