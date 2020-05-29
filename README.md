@@ -5,7 +5,8 @@
     * [Set Environment Variables](#2-2)
     * [Run Infrastructure and Application Instances](#2-3)
     * [Send a Request for Milk](#2-4)
-    * [Modify Routing Weights for Service Versions](#2-5)
+    * [View Running Instances in a Web Browser](#2-5)
+    * [Modify Routing Weights for Service Versions](#2-6)
 * [Implementation Overview](#3)
 * [Deployment Pipeline Features](#4)
 * [Load Balancing Implementation Patterns](#5)
@@ -62,7 +63,7 @@ Build the images for the goat and farmer applications:
 #### 2. Set Environment Variables <a name="2-2"></a>
 
 Set environment variables for your local machine:
-* Replace "your-host-ip" with the ip address of your machine:
+* In ./loadbalancer/.env, replace "your-host-ip" with the ip address of your machine:
 ex. if your host IP is 10.0.0.20
 ```
 CONSUL_ADDR=10.0.0.20:8500
@@ -96,7 +97,21 @@ curl -s "http://localhost:8212/milk"
 ```
 Note: The farmer and goat will change as milk requests are load balanced across application instances.
 
-#### 5. Modify Routing Weights for Service Versions <a name="2-5"></a>
+#### 5. View Running Instances in a Web Browser <a name="2-5"></a>
+
+View registered services and key-value store in consul:
+* If consul is running on your local host at port 8500:
+```
+http://localhost:8500
+```
+
+View stats dashboard for haproxy instances:
+* If an haproxy instance is running on your local host with stats port 8414: (refer to the port values in ./loadbalancer/.env or the port mappings of the running containers)
+```
+http://localhost:8414/monitor
+```
+
+#### 6. Modify Routing Weights for Service Versions <a name="2-6"></a>
 
 Option 1: Fork and commit
 1. Fork the repo
@@ -108,6 +123,7 @@ Option 1: Fork and commit
 Option 2: Point gonsul at a local file 
 
 Gonsul can also be configured to use a local file instead of a remote url. See gonsul docs for details: https://github.com/miniclip/gonsul#--repo-url
+
 To do this, you'll need to make some modifications to the gonsul service in docker-compose-run.yml:
 1. Remove the --repo-url arg (this tells gonsul to look in the local file system at --repo-root)
 2. Change --repo-root to a directory in the container which the gonsul user can read (/home/gonsul/kvstore)
