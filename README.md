@@ -1,23 +1,30 @@
 ## "Goat Milk?" Dairy Farm
+* [High-Level Architecture](#0)
 * [Project Overview](#1)
-* [Build and Run the Dairy Farm](#2)
-    * [Build Images](#2-1)
-    * [Set Environment Variables](#2-2)
-    * [Run Infrastructure and Application Instances](#2-3)
-    * [Send a Request for Milk](#2-4)
-    * [View Running Instances in a Web Browser](#2-5)
-    * [Modify Routing Weights for Service Versions](#2-6)
-* [Implementation Overview](#3)
-* [Deployment Pipeline Features](#4)
-* [Load Balancing Implementation Patterns](#5)
-   * [Populating the service registry](#5-1)
-   * [Populating routing rules](#5-2)
-   * [Location of load balancing decision](#5-3)
-* [Implementation Patterns of Well-Known Tools](#6)
-   * [Kubernetes](#6-1)
-   * [Istio](#6-2)
-   * [Netflix Eureka + Ribbon](#6-3)
-   * [HA-Proxy + Consul + consul-template (this project)](#6-4)
+* [Implementation](#2)
+* [Deployment Pipeline Features](#3)
+* [Load Balancing Implementation Patterns](#4)
+   * [Populating the service registry](#4-1)
+   * [Populating routing rules](#4-2)
+   * [Location of load balancing decision](#4-3)
+* [Implementation Patterns of Well-Known Tools](#5)
+   * [Kubernetes](#5-1)
+   * [Istio](#5-2)
+   * [Netflix Eureka + Ribbon](#5-3)
+   * [HA-Proxy + Consul + consul-template (this project)](#5-4)
+* [Build and Run the Dairy Farm](#6)
+    * [Build Images](#6-1)
+    * [Set Environment Variables](#6-2)
+    * [Run Infrastructure and Application Instances](#6-3)
+    * [Send a Request for Milk](#6-4)
+    * [View Running Instances in a Web Browser](#6-5)
+    * [Modify Routing Weights for Service Versions](#6-6)
+
+
+## High-Level Architecture <a name="0"></a>
+
+![Architecture Diagram](architecture-diagram.png)
+
 
 ## Project Overview <a name="1"></a>
 
@@ -40,102 +47,7 @@ This makes it easy to: test the tools, get a feel for the concepts, and see what
 See the section on deployment pipeline features to see what's included in diary farm implementation and what's missing.
 
 
-## Build and Run the Dairy Farm <a name="2"></a>
-
-#### 1. Build Images <a name="2-1"></a>
-
-Pull the consul image:
-```
-docker pull consul
-```
-
-Build the docker images for the load balancer: (haproxy, registrator, gonsul)
-```
-./loadbalancer/build.sh
-```
-
-Build the images for the goat and farmer applications:
-```
-./goat/docker-build.sh
-./farmer/docker-build.sh
-```
-
-#### 2. Set Environment Variables <a name="2-2"></a>
-
-Set environment variables for your local machine:
-* In ./loadbalancer/.env, replace "your-host-ip" with the ip address of your machine:
-ex. if your host IP is 10.0.0.20
-```
-CONSUL_ADDR=10.0.0.20:8500
-HOST_IP=10.0.0.10
-```
-* Optionally modify ports for the farmer and goat load balancers: (haproxy instances)
-
-#### 3. Run Infrastructure and Application Instances <a name="2-3"></a>
-
-Run infrastructure images for the dairy farm: (specified in ./loadbalancer/docker-compose-run.yml)
-```
-./loadbalancer/run.sh
-```
-
-Run some goats and farmers: (as many as you like, just vary the port and version number)
-* If you are running the apps on host 10.0.0.20 and consul on 10.0.0.20:8500, then you can try something like the following:
-```
-./goat/docker-run.sh -p 8101 -v 0.0.1 -h 10.0.0.20 -ch 10.0.0.20:8500
-./goat/docker-run.sh -p 8102 -v 0.0.2 -h 10.0.0.20 -ch 10.0.0.20:8500
-
-./farmer/docker-run.sh -p 8111 -v 0.0.1 -h 10.0.0.20 -ch 10.0.0.20:8500
-./farmer/docker-run.sh -p 8112 -v 0.0.2 -h 10.0.0.20 -ch 10.0.0.20:8500
-```
-
-#### 4. Send a Request for Milk <a name="2-4"></a>
-
-Send a milk request to the farmer load balancer:
-ex. If farmer haproxy app is running on port 8212:
-```
-curl -s "http://localhost:8212/milk"
-```
-Note: The farmer and goat will change as milk requests are load balanced across application instances.
-
-#### 5. View Running Instances in a Web Browser <a name="2-5"></a>
-
-View registered services and key-value store in consul:
-* If consul is running on your local host at port 8500:
-```
-http://localhost:8500
-```
-
-View stats dashboard for haproxy instances:
-* If an haproxy instance is running on your local host with stats port 8414: (refer to the port values in ./loadbalancer/.env or the port mappings of the running containers)
-```
-http://localhost:8414/monitor
-```
-
-#### 6. Modify Routing Weights for Service Versions <a name="2-6"></a>
-
-**Option 1: Fork and commit**
-1. Fork the repo
-2. Edit values in ./loadbalancer/kvstore/farmer.json or ./loadbalancer/kvstore/goat.json
-3. Commit and push the change
-4. Update the CONFIG_REPO_URL in ./loadbalancer/.env to the ssh url of your fork
-5. Stop and restart gonsul to pickup the new config
-
-**Option 2: Point gonsul at a local file**
-
-Gonsul can also be configured to use a local file instead of a remote url. See gonsul docs for details: https://github.com/miniclip/gonsul#--repo-url
-
-To do this, you'll need to make some modifications to the gonsul service in docker-compose-run.yml:
-1. Remove the --repo-url arg (this tells gonsul to look in the local file system at --repo-root)
-2. Change --repo-root to a directory in the container which the gonsul user can read (/home/gonsul/kvstore)
-3. Add a bindmount for the ./loadbalancer/kvstore directory to the directory specified by --repo-root:
-```
-volumes:
-    - type: bind
-      source: ./kvstore
-      target: /home/gonsul/kvstore
-```
-
-## Implementation Overview <a name="3"></a>
+## Implementation <a name="2"></a>
 
 * A loadbalancer for service-level, canary deployments by service name and version.
 * Routing is implemented using server-side load balancing with one loadbalancer per service cluster.
@@ -148,15 +60,7 @@ volumes:
 
 Note: There a pros and cons to each load balancing implementation pattern. See the section load balancing implementation patterns for the patterns types, examples from well-known tools, and the pattern used by this dairy farm.
 
-TODO: add a block diagram here!!
-```
-farmer LB       service registry        gonsul      git repo with weights
-farmers         kv store: weights
-goat LB
-goats
-```
-
-## Deployment Pipeline Features <a name="4"></a>
+## Deployment Pipeline Features <a name="3"></a>
 
 Ideally, everything in this list would be automated - even the commits to git which update the deployment config!
 Automation and resource management is where cloud native pipelines and orchestration tools really come in handy.
@@ -179,7 +83,7 @@ Note on Data Migration:
 * In this case, you need blue-green and can't go with canary.
 
 
-## Load Balancing Implementation Patterns <a name="5"></a>
+## Load Balancing Implementation Patterns <a name="4"></a>
 
 Definition: Load balancing - balancing traffic across a set of resources.
 
@@ -193,19 +97,19 @@ Load balancing implementations can be characterized by three key elements:
 
 Implementation options for each load balancing element:
 
-#### 1. Populating the service registry <a name="5-1"></a>
+#### 1. Populating the service registry <a name="4-1"></a>
  * Smart orchestrator, simple clients
      - orchestrator keeps track of where it deploys client apps and checks up on their health
  * Simple orchestrator, smart clients
      - orchestrator deploys and forgets, client apps routinely register themselves
 
-#### 2. Populating routing rules <a name="5-2"></a>
+#### 2. Populating routing rules <a name="4-2"></a>
  * Locally sourced
      - rules generated by load balancing host
  * Externally sourced
      - rules served from an api to the load balancing host
 
-#### 3. Location of load balancing decision (where to send the request) <a name="5-3"></a>
+#### 3. Location of load balancing decision (where to send the request) <a name="4-3"></a>
  * Server-side load balancing
      - decision made by a load balancing server
  * Client-side load balancing
@@ -213,9 +117,10 @@ Implementation options for each load balancing element:
 
 Existing load balancing implementations exhibit some combination of these elements.
 
-## Implementation Patterns of Well-Known Tools (and this project) <a name="6"></a>
 
-#### Kubernetes <a name="6-1"></a>
+## Implementation Patterns of Well-Known Tools (and this project) <a name="5"></a>
+
+#### Kubernetes <a name="5-1"></a>
 1. Populate service registry
     - **Smart orchestrator, simple clients**
         (kubernetes populates IP tables for the services it deploys)
@@ -226,7 +131,7 @@ Existing load balancing implementations exhibit some combination of these elemen
     - **Server-side**
         (resolves service name using IP tables - clients are unaware of load balancing)
 
-#### Istio <a name="6-2"></a>
+#### Istio <a name="5-2"></a>
 1. Populate service registry
     - **Simple orchestrator, smart clients**
         (envoy side-cars register and report health to the management API, forming the data plane)
@@ -237,7 +142,7 @@ Existing load balancing implementations exhibit some combination of these elemen
     - **Client-side (in side-car)**
         (envoy side-car proxy routes traffic from the service)
 
-#### Netflix Eureka + Ribbon <a name="6-3"></a>
+#### Netflix Eureka + Ribbon <a name="5-3"></a>
 1. Populate service registry
     - **Simple orchestrator, smart clients**
         (client apps register and report health to the eureka server)
@@ -248,7 +153,7 @@ Existing load balancing implementations exhibit some combination of these elemen
     - **Client-side (in app)**
         (app choses a service based on selection logic in the Ribbon client)
 
-#### HA-Proxy + Consul + consul-template (this project) <a name="6-4"></a>
+#### HA-Proxy + Consul + consul-template (this project) <a name="5-4"></a>
 1. Populate service registry
     - **Simple orchestrator, smart clients**
         (client apps register and provide a health check endpoint for consul to monitor their status)
@@ -258,3 +163,99 @@ Existing load balancing implementations exhibit some combination of these elemen
 3. Location of load balancing decision
     - **Server-side**
         (routing decision is made by the HA-Proxy instance sitting in front of the service cluster)
+
+
+## Build and Run the Dairy Farm <a name="6"></a>
+
+#### 1. Build Images <a name="6-1"></a>
+
+Pull the consul image:
+```
+docker pull consul
+```
+
+Build the docker images for the load balancer: (haproxy, registrator, gonsul)
+```
+./loadbalancer/build.sh
+```
+
+Build the images for the goat and farmer applications:
+```
+./goat/docker-build.sh
+./farmer/docker-build.sh
+```
+
+#### 2. Set Environment Variables <a name="6-2"></a>
+
+Set environment variables for your local machine:
+* In ./loadbalancer/.env, replace "your-host-ip" with the ip address of your machine:
+ex. if your host IP is 10.0.0.20
+```
+CONSUL_ADDR=10.0.0.20:8500
+HOST_IP=10.0.0.10
+```
+* Optionally modify ports for the farmer and goat load balancers: (haproxy instances)
+
+#### 3. Run Infrastructure and Application Instances <a name="6-3"></a>
+
+Run infrastructure images for the dairy farm: (specified in ./loadbalancer/docker-compose-run.yml)
+```
+./loadbalancer/run.sh
+```
+
+Run some goats and farmers: (as many as you like, just vary the port and version number)
+* If you are running the apps on host 10.0.0.20 and consul on 10.0.0.20:8500, then you can try something like the following:
+```
+./goat/docker-run.sh -p 8101 -v 0.0.1 -h 10.0.0.20 -ch 10.0.0.20:8500
+./goat/docker-run.sh -p 8102 -v 0.0.2 -h 10.0.0.20 -ch 10.0.0.20:8500
+
+./farmer/docker-run.sh -p 8111 -v 0.0.1 -h 10.0.0.20 -ch 10.0.0.20:8500
+./farmer/docker-run.sh -p 8112 -v 0.0.2 -h 10.0.0.20 -ch 10.0.0.20:8500
+```
+
+#### 4. Send a Request for Milk <a name="6-4"></a>
+
+Send a milk request to the farmer load balancer:
+ex. If farmer haproxy app is running on port 8212:
+```
+curl -s "http://localhost:8212/milk"
+```
+Note: The farmer and goat will change as milk requests are load balanced across application instances.
+
+#### 5. View Running Instances in a Web Browser <a name="6-5"></a>
+
+View registered services and key-value store in consul:
+* If consul is running on your local host at port 8500:
+```
+http://localhost:8500
+```
+
+View stats dashboard for haproxy instances:
+* If an haproxy instance is running on your local host with stats port 8414: (refer to the port values in ./loadbalancer/.env or the port mappings of the running containers)
+```
+http://localhost:8414/monitor
+```
+
+#### 6. Modify Routing Weights for Service Versions <a name="6-6"></a>
+
+**Option 1: Fork and commit**
+1. Fork the repo
+2. Edit values in ./loadbalancer/kvstore/farmer.json or ./loadbalancer/kvstore/goat.json
+3. Commit and push the change
+4. Update the CONFIG_REPO_URL in ./loadbalancer/.env to the ssh url of your fork
+5. Stop and restart gonsul to pickup the new config
+
+**Option 2: Point gonsul at a local file**
+
+Gonsul can also be configured to use a local file instead of a remote url. See gonsul docs for details: https://github.com/miniclip/gonsul#--repo-url
+
+To do this, you'll need to make some modifications to the gonsul service in docker-compose-run.yml:
+1. Remove the --repo-url arg (this tells gonsul to look in the local file system at --repo-root)
+2. Change --repo-root to a directory in the container which the gonsul user can read (/home/gonsul/kvstore)
+3. Add a bindmount for the ./loadbalancer/kvstore directory to the directory specified by --repo-root:
+```
+volumes:
+    - type: bind
+      source: ./kvstore
+      target: /home/gonsul/kvstore
+```
