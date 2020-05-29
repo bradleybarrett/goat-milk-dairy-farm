@@ -113,14 +113,14 @@ http://localhost:8414/monitor
 
 #### 6. Modify Routing Weights for Service Versions <a name="2-6"></a>
 
-Option 1: Fork and commit
+**Option 1: Fork and commit**
 1. Fork the repo
 2. Edit values in ./loadbalancer/kvstore/farmer.json or ./loadbalancer/kvstore/goat.json
 3. Commit and push the change
 4. Update the CONFIG_REPO_URL in ./loadbalancer/.env to the ssh url of your fork
 5. Stop and restart gonsul to pickup the new config
 
-Option 2: Point gonsul at a local file 
+**Option 2: Point gonsul at a local file**
 
 Gonsul can also be configured to use a local file instead of a remote url. See gonsul docs for details: https://github.com/miniclip/gonsul#--repo-url
 
