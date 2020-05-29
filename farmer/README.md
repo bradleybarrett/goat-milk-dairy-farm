@@ -24,11 +24,11 @@ default prefix = "config"
 Note, it can take some time for the KV update in consul to sync to the spring app!
 
 Build docker image with tag "latest", can specify anything as tag:
-./gradlew jibDockerBuild --image=bbarrett/farmer:latest
+./docker-build.sh
 
 Run docker image as container on server port 8092 with version 0.0.0.3:
     version is provided for ease of demo, this would not normally be overriden.
 docker run -p 8092:8091 bbarrett/farmer:latest --host.ip=10.100.41.156 --host.port=8092 --consul.host=10.100.41.156 --version=0.0.0.3
 
 Run the app as a docker container on port with version (used for demo)
-./docker/run-farmer.sh -p 8101 -v 0.0.0.1
+./docker-run.sh -p 8101 -v 0.0.0.1 -ch some_host:some_port

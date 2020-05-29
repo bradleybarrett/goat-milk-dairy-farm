@@ -1,11 +1,10 @@
 #!/bin/bash
-localhost=192.168.1.95
 serverPort=8101
 
 port=$serverPort
 version=0
-host=$localhost
-consulHost=$localhost
+host=localhost
+consulHost=localhost
 
 while [ "$1" != "" ]; do
     case $1 in

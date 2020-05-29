@@ -14,25 +14,22 @@ while [ "$1" != "" ]; do
     shift
 done
 
-# Ping consul server on the provided address: ex. pingConsulServer http://localhost:8500
-pingConsulServer()
-{
-    local timeout=1 # seconds
-    echo $(curl -s -o /dev/null -w %{http_code} --connect-timeout ${timeout} "${1}/v1/status/leader")
-}
-
+# Get the cluster leader from the consul server running at the provided address. 
+# ex. getClusterLeader http://localhost:8500
 getClusterLeader()
 {
     local timeout=1 # seconds
     echo $(curl -s --connect-timeout ${timeout} "${1}/v1/status/leader" | tr -d '"')
 }
 
-# Poll mock server running on the provided port: ex. pollConsulServer http://localhost:8500
+# Wait for consul to start. 
+# ex. waitForConsulServer http://localhost:8500
 waitForConsulServer()
 {
     local waitPeriod=2 # seconds
     local timeElapsed=0 # seconds
     
+    # Wait for the consul server to start and elect a cluster leader.
     while [ -z $(getClusterLeader $1) ];
     do
         echo "Waiting for consul server at ${1}, time elapsed: ${timeElapsed}s"
@@ -43,7 +40,7 @@ waitForConsulServer()
     echo "Consul server is UP at ${1}"
 }
 
-# Wait for consul to start
+# Wait for consul to start.
 waitForConsulServer ${consulAddr}
 
 # Run gonsul with the provided commands.
