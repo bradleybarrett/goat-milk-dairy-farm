@@ -41,7 +41,7 @@ See the section on deployment pipeline features to see what's included in diary 
 
 ## Build and Run the Dairy Farm <a name="2"></a>
 
-#### Build Images <a name="2-1"></a>
+#### 1. Build Images <a name="2-1"></a>
 
 Pull the consul image:
 ```
@@ -59,7 +59,7 @@ Build the images for the goat and farmer applications:
 ./farmer/docker-build.sh
 ```
 
-#### Set Environment Variables <a name="2-2"></a>
+#### 2. Set Environment Variables <a name="2-2"></a>
 
 Set environment variables for your local machine:
 * Replace "your-host-ip" with the ip address of your machine:
@@ -70,7 +70,7 @@ HOST_IP=10.0.0.10
 ```
 * Optionally modify ports for the farmer and goat load balancers: (haproxy instances)
 
-#### Run Infrastructure and Application Instances <a name="2-3"></a>
+#### 3. Run Infrastructure and Application Instances <a name="2-3"></a>
 
 Run infrastructure images for the dairy farm: (specified in ./loadbalancer/docker-compose-run.yml)
 ```
@@ -87,7 +87,7 @@ Run some goats and farmers: (as many as you like, just vary the port and version
 ./farmer/docker-run.sh -p 8112 -v 0.0.2 -h 10.0.0.20 -ch 10.0.0.20:8500
 ```
 
-#### Send a Request for Milk <a name="2-4"></a>
+#### 4. Send a Request for Milk <a name="2-4"></a>
 
 Send a milk request to the farmer load balancer:
 ex. If farmer haproxy app is running on port 8212:
@@ -96,7 +96,7 @@ curl -s "http://localhost:8212/milk"
 ```
 Note: The farmer and goat will change as milk requests are load balanced across application instances.
 
-#### Modify Routing Weights for Service Versions <a name="2-5"></a>
+#### 5. Modify Routing Weights for Service Versions <a name="2-5"></a>
 
 Option 1: Fork and commit
 1. Fork the repo
