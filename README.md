@@ -28,37 +28,37 @@
 
 ## Project Overview <a name="1"></a>
 
-The goal of this project was to learn more about load balancing tools that support rolling deployments (blue-green and canary).
+The goal of this project was to learn more about load balancing tools for rolling deployments (blue-green and canary).
 
-The project implements a dairy farm that produces bottles of milk. Each incoming request for milk is a received by a farmer, who milks a goat, then returns a milk bottle stamped with the farmer and goat who serviced the request. 
+The project implements a dairy farm that produces bottles of milk. Each incoming request for milk is a received by a farmer, who milks a goat, then returns a milk bottle labeled with the farmer and goat who serviced the request. 
 
 These labels are important because they change as milk requests are loadbalanced across the farmers and goats. Also, "Goat Milk?" Dairy Farm, is all about that farm-to-table.
 
 The diary farm has multiple instances of farmers and goats, each with a service name and version number. Ex: farmer-v1, goat-v1, goat-v2. 
 
-Internal load balancing is implemented to allow service-level canary deployments by service name and version. A routing weight can be assigned to each service-version pair. Routing rules are automically updated as services scale up and down.
+Internal load balancing is implemented to allow service-level canary deployments by service name and version. A routing weight can be assigned to each service-version pair (ex. route 80% of traffic to v1 goats and 20% to v2 goats). The routing rules in each load balancer are automically updated when weights change and services scale up/down.
 
-For example, introducing a new goat is easy: start the goat with the new version number and update the service-version routing weight to a non-zero value. To stop routing traffic to all services of a specific version, set the service-version routing weight to zero.
+For example, introducing a new goat is easy: start the goat with the new version number and update the service-version routing weight to a non-zero percentage. To stop routing traffic to all services of a specific version, set the service-version routing weight to zero.
 
 The dairy farm uses load balancing tools that can all be run in a non-orchestrated and non-cloud environment. 
 
 This makes it easy to: test the tools, get a feel for the concepts, and see what additional functionality is desired in a full deployment pipeline.
 
-See the section on deployment pipeline features to see what's included in diary farm implementation and what's missing.
+Check out the section on "Deployment Pipeline Features" to see what's included in the diary farm implementation and what's missing.
 
 
 ## Implementation <a name="2"></a>
 
-* A loadbalancer for service-level, canary deployments by service name and version.
-* Routing is implemented using server-side load balancing with one loadbalancer per service cluster.
+* A load balancer for service-level, canary deployments by service name and version.
+* Routing is implemented using server-side load balancing with one load balancer per service cluster.
 * Routing rules are updated in real-time using information stored in consul: service registrations and traffic weights.
-* HA-Proxy loadbalancers access information in consul and populate routing rules using consul-template.
+* HA-Proxy load balancers access information in consul and populate routing rules using consul-template.
 * Traffic weights are stored in a git repository and synced to the consul kv-store in real-time using gonsul.
 * HA-Proxy hot reload and consul-template polling allow routing rules to be updated automatically without dropping existing traffic.
-* Registration side-car containers register each loadbalancer with consul. As a result, the loadbalancer address is flexible and client-side load balancing can be implemented to support redundant loadbalncers for each service.
+* Registration side-car containers register each load balancer with consul. As a result, the load balancer address is flexible and client-side load balancing can be implemented to support redundant load balncers for each service.
 * This load balancing implementation attempts to externalize all routing logic from the application services (hence the use of server-side load balancing).
 
-Note: There a pros and cons to each load balancing implementation pattern. See the section load balancing implementation patterns for the patterns types, examples from well-known tools, and the pattern used by this dairy farm.
+Note: There a pros and cons to each load balancing implementation pattern. See the section "Load Balancing Implementation Patterns" for the key elements of load balancing, examples from well-known tools, and the pattern used by this dairy farm.
 
 ## Deployment Pipeline Features <a name="3"></a>
 
