@@ -176,13 +176,13 @@ docker pull consul
 
 Build the docker images for the load balancer: (haproxy, registrator, gonsul)
 ```
-./loadbalancer/build.sh
+cd loadbalancer && ./build.sh && cd ..
 ```
 
 Build the images for the goat and farmer applications:
 ```
-./goat/docker-build.sh
-./farmer/docker-build.sh
+cd goat && ./docker-build.sh && cd ..
+cd farmer && ./docker-build.sh && cd ..
 ```
 
 #### 2. Set Environment Variables <a name="6-2"></a>
@@ -192,25 +192,30 @@ Set environment variables for your local machine:
 ex. if your host IP is 10.0.0.20
 ```
 CONSUL_ADDR=10.0.0.20:8500
-HOST_IP=10.0.0.10
+HOST_IP=10.0.0.20
 ```
 * Optionally modify ports for the farmer and goat load balancers: (haproxy instances)
 
 #### 3. Run Infrastructure and Application Instances <a name="6-3"></a>
 
 Run infrastructure images for the dairy farm: (specified in ./loadbalancer/docker-compose-run.yml)
+* Note: The apps will take a second to start. To see the logs for all apps as they start, execute run without the daemon argument: ./run.sh
 ```
-./loadbalancer/run.sh
+cd loadbalancer && ./run.sh -d && cd ..
 ```
 
 Run some goats and farmers: (as many as you like, just vary the port and version number)
 * If you are running the apps on host 10.0.0.20 and consul on 10.0.0.20:8500, then you can try something like the following:
 ```
-./goat/docker-run.sh -p 8101 -v 0.0.1 -h 10.0.0.20 -ch 10.0.0.20:8500
-./goat/docker-run.sh -p 8102 -v 0.0.2 -h 10.0.0.20 -ch 10.0.0.20:8500
+cd goat
+./docker-run.sh -p 8101 -v 0.0.1 -h 10.0.0.20 -ch 10.0.0.20:8500
+./docker-run.sh -p 8102 -v 0.0.2 -h 10.0.0.20 -ch 10.0.0.20:8500
+cd ..
 
-./farmer/docker-run.sh -p 8111 -v 0.0.1 -h 10.0.0.20 -ch 10.0.0.20:8500
-./farmer/docker-run.sh -p 8112 -v 0.0.2 -h 10.0.0.20 -ch 10.0.0.20:8500
+cd farmer
+./docker-run.sh -p 8111 -v 0.0.1 -h 10.0.0.20 -ch 10.0.0.20:8500
+./docker-run.sh -p 8112 -v 0.0.2 -h 10.0.0.20 -ch 10.0.0.20:8500
+cd ..
 ```
 
 #### 4. Send a Request for Milk <a name="6-4"></a>
@@ -249,13 +254,24 @@ http://localhost:8414/monitor
 
 Gonsul can also be configured to use a local file instead of a remote url. See gonsul docs for details: https://github.com/miniclip/gonsul#--repo-url
 
-To do this, you'll need to make some modifications to the gonsul service in docker-compose-run.yml:
-1. Remove the --repo-url arg (this tells gonsul to look in the local file system at --repo-root)
-2. Change --repo-root to a directory in the container which the gonsul user can read (/home/gonsul/kvstore)
-3. Add a bindmount for the ./loadbalancer/kvstore directory to the directory specified by --repo-root:
+To do this, you'll need to make two small modifications to the gonsul service in docker-compose-run.yml:
+1. Remove the --repo-url arg
+* Note: This tells gonsul to look in the local file system at /--repo-root/--repo-base-path. For the current values in the .yml file, gonsul will look for values in /home/gonsul/tmp/loadbalancer/kvstore.
+2. Add a bindmount for the ./loadbalancer/kvstore directory to the directory specified by the combintation of --repo-root and --repo-base-path:
 ```
 volumes:
     - type: bind
       source: ./kvstore
-      target: /home/gonsul/kvstore
+      target: /home/gonsul/tmp/loadbalancer/kvstore
+```   
+* Note: The bindmount makes the local files available at the proper location in the container. Docker bindmounts sync changes between the host and container, so the container will see any changes we make on the host. Therefore, gonsul will see any changes to the routing weight files on the host.
+3. Stop the gonsul container: 
 ```
+docker ps -a | grep gonsul | cut -d " " -f 1 | xargs docker stop
+```
+4. Restart gonsul with the new runtime args:
+```
+cd loadbalancer && ./run.sh -d gonsul && cd ..
+```
+5. Modify values in the ./loadbalancer/kvstore and observe the resulting changes in the consul ui and load balancer stats ui. 
+* Note: The values will be synced to the consul kv-store and used to compute new routing weights for the associated load balancer. 

@@ -1,2 +1,2 @@
 #!/bin/bash
-./gradlew jibDockerBuild --image=bbarrett/farmer:latest
+./gradlew jibDockerBuild --image=bbarrett/goat:latest
