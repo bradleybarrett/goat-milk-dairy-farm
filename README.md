@@ -221,7 +221,7 @@ $ cd ..
 #### 4. Send a Request for Milk <a name="6-4"></a>
 
 Send a milk request to the farmer load balancer:
-ex. If farmer haproxy app is running on port 8212:
+ex. If a farmer haproxy instance is running on port 8212:
 ```
 $ curl -s "http://localhost:8212/milk"
 ```
@@ -268,8 +268,8 @@ volumes:
       source: ./kvstore
       target: /home/gonsul/tmp/loadbalancer/kvstore
 ```   
-* Note: The bindmount makes the local files available at the proper location in the container. Docker bindmounts sync changes between the host and container, so the container will see any changes we make on the host. Therefore, gonsul will see any changes to the routing weight files on the host.
-3. Stop and restart the gonsul with the new config: 
+* Note: The bindmount makes the local kvstore files available at the proper location in the container. Docker bindmounts sync changes between the host and container, so the container will see any changes we make on the host. Therefore, gonsul will see any changes to the routing weight files on the host.
+3. Stop and restart gonsul with the new config: 
 ```
 $ docker ps -a | grep gonsul | cut -d " " -f 1 | xargs docker stop
 $ cd loadbalancer && ./run.sh -d gonsul && cd ..
