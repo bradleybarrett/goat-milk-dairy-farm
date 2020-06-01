@@ -171,18 +171,18 @@ Existing load balancing implementations exhibit some combination of these elemen
 
 Pull the consul image:
 ```
-docker pull consul
+$ docker pull consul
 ```
 
 Build the docker images for the load balancer: (haproxy, registrator, gonsul)
 ```
-cd loadbalancer && ./build.sh && cd ..
+$ cd loadbalancer && ./build.sh && cd ..
 ```
 
 Build the images for the goat and farmer applications:
 ```
-cd goat && ./docker-build.sh && cd ..
-cd farmer && ./docker-build.sh && cd ..
+$ cd goat && ./docker-build.sh && cd ..
+$ cd farmer && ./docker-build.sh && cd ..
 ```
 
 #### 2. Set Environment Variables <a name="6-2"></a>
@@ -201,21 +201,21 @@ HOST_IP=10.0.0.20
 Run infrastructure images for the dairy farm: (specified in ./loadbalancer/docker-compose-run.yml)
 * Note: The apps will take a second to start. To see the logs for all apps as they start, execute run without the daemon argument: ./run.sh
 ```
-cd loadbalancer && ./run.sh -d && cd ..
+$ cd loadbalancer && ./run.sh -d && cd ..
 ```
 
 Run some goats and farmers: (as many as you like, just vary the port and version number)
 * If you are running the apps on host 10.0.0.20 and consul on 10.0.0.20:8500, then you can try something like the following:
 ```
-cd goat
-./docker-run.sh -p 8101 -v 0.0.1 -h 10.0.0.20 -ch 10.0.0.20:8500
-./docker-run.sh -p 8102 -v 0.0.2 -h 10.0.0.20 -ch 10.0.0.20:8500
-cd ..
+$ cd goat
+$ ./docker-run.sh -p 8101 -v 0.0.1 -h 10.0.0.20 -ch 10.0.0.20:8500
+$ ./docker-run.sh -p 8102 -v 0.0.2 -h 10.0.0.20 -ch 10.0.0.20:8500
+$ cd ..
 
-cd farmer
-./docker-run.sh -p 8111 -v 0.0.1 -h 10.0.0.20 -ch 10.0.0.20:8500
-./docker-run.sh -p 8112 -v 0.0.2 -h 10.0.0.20 -ch 10.0.0.20:8500
-cd ..
+$ cd farmer
+$ ./docker-run.sh -p 8111 -v 0.0.1 -h 10.0.0.20 -ch 10.0.0.20:8500
+$ ./docker-run.sh -p 8112 -v 0.0.2 -h 10.0.0.20 -ch 10.0.0.20:8500
+$ cd ..
 ```
 
 #### 4. Send a Request for Milk <a name="6-4"></a>
@@ -223,7 +223,7 @@ cd ..
 Send a milk request to the farmer load balancer:
 ex. If farmer haproxy app is running on port 8212:
 ```
-curl -s "http://localhost:8212/milk"
+$ curl -s "http://localhost:8212/milk"
 ```
 Note: The farmer and goat will change as milk requests are load balanced across application instances.
 
@@ -249,6 +249,10 @@ http://localhost:8414/monitor
 3. Commit and push the change
 4. Update the CONFIG_REPO_URL in ./loadbalancer/.env to the ssh url of your fork
 5. Stop and restart gonsul to pickup the new config
+```
+$ docker ps -a | grep gonsul | cut -d " " -f 1 | xargs docker stop
+$ cd loadbalancer && ./run.sh -d gonsul && cd ..
+```
 
 **Option 2: Point gonsul at a local file**
 
@@ -265,13 +269,10 @@ volumes:
       target: /home/gonsul/tmp/loadbalancer/kvstore
 ```   
 * Note: The bindmount makes the local files available at the proper location in the container. Docker bindmounts sync changes between the host and container, so the container will see any changes we make on the host. Therefore, gonsul will see any changes to the routing weight files on the host.
-3. Stop the gonsul container: 
+3. Stop and restart the gonsul with the new config: 
 ```
-docker ps -a | grep gonsul | cut -d " " -f 1 | xargs docker stop
+$ docker ps -a | grep gonsul | cut -d " " -f 1 | xargs docker stop
+$ cd loadbalancer && ./run.sh -d gonsul && cd ..
 ```
-4. Restart gonsul with the new runtime args:
-```
-cd loadbalancer && ./run.sh -d gonsul && cd ..
-```
-5. Modify values in the ./loadbalancer/kvstore and observe the resulting changes in the consul ui and load balancer stats ui. 
+4. Modify values in the ./loadbalancer/kvstore and observe the resulting changes in the consul ui and load balancer stats ui. 
 * Note: The values will be synced to the consul kv-store and used to compute new routing weights for the associated load balancer. 
