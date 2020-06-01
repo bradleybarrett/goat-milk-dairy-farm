@@ -71,7 +71,7 @@ Automation and resource management is where cloud native pipelines and orchestra
 | Test the newly provisioned services                       | Manual    |
 | Update deployment config in version control               | Manual    |
 | Update routing based on deployment config and app status  | Automated |
-| Single environment view of apps and infrstructure         | Automated<sup>1</sup> |
+| Single environment view of apps and infrastructure         | Automated<sup>1</sup> |
 | Database migration on upgrade or rollback                 | Missing<sup>2</sup>   |
 
 1. All parts of the application are not registered with consul: goats, farmers and LBs are registered, but gonsul is not.
@@ -159,7 +159,7 @@ Existing load balancing implementations exhibit some combination of these elemen
         (client apps register and provide a health check endpoint for consul to monitor their status)
 2. Populate routing rules
     - **Locally sourced rules**
-        (the template used to create routing rules is part of the loadbalancer image)
+        (the template used to create routing rules is part of the load balancer image)
 3. Location of load balancing decision
     - **Server-side**
         (routing decision is made by the HA-Proxy instance sitting in front of the service cluster)
