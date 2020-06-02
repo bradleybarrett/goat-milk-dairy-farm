@@ -180,7 +180,7 @@ Build the docker images for the load balancer: (haproxy, registrator, gonsul)
 $ cd loadbalancer && ./build.sh && cd ..
 ```
 
-Build the images for the goat and farmer applications:
+Build the images for the goat and farmer applications: (Requires a Java version between 8 and 14 for Gradle)
 ```
 $ cd goat && ./docker-build.sh && cd ..
 $ cd farmer && ./docker-build.sh && cd ..
