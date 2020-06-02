@@ -15,10 +15,11 @@
 * [Build and Run the Dairy Farm](#6)
     * [Build Images](#6-1)
     * [Set Environment Variables](#6-2)
-    * [Run Infrastructure and Application Instances](#6-3)
-    * [Send a Request for Milk](#6-4)
-    * [View Running Instances in a Web Browser](#6-5)
-    * [Modify Routing Weights for Service Versions](#6-6)
+    * [Gonsul Setup: Use a local file or Connect to a remote repo with ssh](#6-3)
+    * [Run Infrastructure and Application Instances](#6-4)
+    * [Send a Request for Milk](#6-5)
+    * [View Running Instances in a Web Browser](#6-6)
+    * [Modify Routing Weights for Service Versions](#6-7)
 
 
 ## High-Level Architecture <a name="0"></a>
@@ -194,9 +195,40 @@ ex. if your host IP is 10.0.0.20
 CONSUL_ADDR=10.0.0.20:8500
 HOST_IP=10.0.0.20
 ```
-* Optionally modify ports for the farmer and goat load balancers: (haproxy instances)
+* Optionally modify ports for the farmer/goat load balancers (haproxy instances) and gonsul.
 
-#### 3. Run Infrastructure and Application Instances <a name="6-3"></a>
+
+#### 3. Gonsul Setup: Use a local directoy or Connect to a remote repo with ssh <a name="6-3"></a>
+
+As currently configured, gonsul reads service-weights from files in a directory on the github repo of this project.
+Gonsul accesses the files by cloning the repo over ssh. The gonsul image created for this project requires 
+an ssh key that is NOT password protected to be bindmounted into the container. 
+
+If the host user's private ssh key (~/ssh/id_rsa) is password protected, then do one of the following:
+
+**Option 1: Point gonsul at a local directory (removing the need for ssh)**
+
+Gonsul can also be configured to use a local directory instead of a remote url. See gonsul docs for details: https://github.com/miniclip/gonsul#--repo-url
+
+To do this, you'll need to make two small modifications to the gonsul service in ./loadbalancer/docker-compose-run.yml:
+1. Remove the --repo-url arg
+* Note: This tells gonsul to look in the local file system at /--repo-root/--repo-base-path. For the current values in the .yml file, gonsul will look for values in /home/gonsul/tmp/loadbalancer/kvstore.
+2. Add a bindmount for the ./loadbalancer/kvstore directory to the directory specified by the combintation of --repo-root and --repo-base-path:
+```
+volumes:
+    - type: bind
+      source: ./kvstore
+      target: /home/gonsul/tmp/loadbalancer/kvstore
+```   
+* Note: The bindmount makes the local kvstore files available at the proper location in the container. Docker bindmounts sync changes between the host and container, so the container will see any changes we make on the host. Therefore, gonsul will see any changes to the routing weight files on the host.
+
+**Option 2: Use an ssh key that is not password protected**
+1. If all ssh keys on the host are password protected, then create an ssh key that is not password protected.
+2. Add the public key of the non-password protected ssh key to the user's github account.
+3. Update the gonsul configuration to use the non-password protected ssh-key: change the value of --repo-ssh-key
+to use the private key file of the non-password protected key. (ex. --repo-ssh-key=/home/gonsul/.ssh/private-key-without-password).
+
+#### 4. Run Infrastructure and Application Instances <a name="6-4"></a>
 
 Run infrastructure images for the dairy farm: (specified in ./loadbalancer/docker-compose-run.yml)
 * Note: The apps will take a second to start. To see the logs for all apps as they start, execute run without the daemon argument: ./run.sh
@@ -218,7 +250,7 @@ $ ./docker-run.sh -p 8112 -v 0.0.2 -h 10.0.0.20 -ch 10.0.0.20:8500
 $ cd ..
 ```
 
-#### 4. Send a Request for Milk <a name="6-4"></a>
+#### 5. Send a Request for Milk <a name="6-5"></a>
 
 Send a milk request to the farmer load balancer:
 ex. If a farmer haproxy instance is running on port 8212:
@@ -227,7 +259,7 @@ $ curl -s "http://localhost:8212/milk"
 ```
 Note: The farmer and goat will change as milk requests are load balanced across application instances.
 
-#### 5. View Running Instances in a Web Browser <a name="6-5"></a>
+#### 6. View Running Instances in a Web Browser <a name="6-6"></a>
 
 View registered services and key-value store in consul:
 * If consul is running on your local host at port 8500:
@@ -241,38 +273,22 @@ View stats dashboard for haproxy instances:
 http://localhost:8414/monitor
 ```
 
-#### 6. Modify Routing Weights for Service Versions <a name="6-6"></a>
+#### 7. Modify Routing Weights for Service Versions <a name="6-7"></a>
 
-**Option 1: Fork and commit**
+Note: The service-version values will be synced to the consul kv-store and used to compute new routing weights for the associated load balancer. Observe the resulting kvstore changes in the consul ui and the computed routing weights in load balancer stats ui. See the section "View Running Instances in a Web Browser" for how to access each ui in a web browser.
+
+**Option 1: Fork and commit (use if gonsul connects to a remote repo)**
 1. Fork the repo
-2. Edit values in ./loadbalancer/kvstore/farmer.json or ./loadbalancer/kvstore/goat.json
-3. Commit and push the change
-4. Update the CONFIG_REPO_URL in ./loadbalancer/.env to the ssh url of your fork
-5. Stop and restart gonsul to pickup the new config
+2. Update the CONFIG_REPO_URL in ./loadbalancer/.env to the ssh url of your fork
+3. Stop and restart gonsul with the new config
 ```
 $ docker ps -a | grep gonsul | cut -d " " -f 1 | xargs docker stop
 $ cd loadbalancer && ./run.sh -d gonsul && cd ..
 ```
+4. Clone the fork
+5. Edit values in ./loadbalancer/kvstore/farmer.json or ./loadbalancer/kvstore/goat.json
+6. Commit and push the change to the master branch of the fork
+7. Repeat steps 5 and 6 for subsequent changes 
 
-**Option 2: Point gonsul at a local file**
-
-Gonsul can also be configured to use a local file instead of a remote url. See gonsul docs for details: https://github.com/miniclip/gonsul#--repo-url
-
-To do this, you'll need to make two small modifications to the gonsul service in docker-compose-run.yml:
-1. Remove the --repo-url arg
-* Note: This tells gonsul to look in the local file system at /--repo-root/--repo-base-path. For the current values in the .yml file, gonsul will look for values in /home/gonsul/tmp/loadbalancer/kvstore.
-2. Add a bindmount for the ./loadbalancer/kvstore directory to the directory specified by the combintation of --repo-root and --repo-base-path:
-```
-volumes:
-    - type: bind
-      source: ./kvstore
-      target: /home/gonsul/tmp/loadbalancer/kvstore
-```   
-* Note: The bindmount makes the local kvstore files available at the proper location in the container. Docker bindmounts sync changes between the host and container, so the container will see any changes we make on the host. Therefore, gonsul will see any changes to the routing weight files on the host.
-3. Stop and restart gonsul with the new config: 
-```
-$ docker ps -a | grep gonsul | cut -d " " -f 1 | xargs docker stop
-$ cd loadbalancer && ./run.sh -d gonsul && cd ..
-```
-4. Modify values in the ./loadbalancer/kvstore and observe the resulting changes in the consul ui and load balancer stats ui. 
-* Note: The values will be synced to the consul kv-store and used to compute new routing weights for the associated load balancer. 
+**Option 2: Modify the local file (use if gonsul reads a local directory)**
+1. Edit values in ./loadbalancer/kvstore/farmer.json or ./loadbalancer/kvstore/goat.json
