@@ -275,7 +275,7 @@ http://localhost:8414/monitor
 
 #### 7. Modify Routing Weights for Service Versions <a name="6-7"></a>
 
-Note: The service-version values will be synced to the consul kv-store and used to compute new routing weights for the associated load balancer. Observe the resulting kvstore changes in the consul ui and the computed routing weights in load balancer stats ui. See the section "View Running Instances in a Web Browser" for how to access each ui in a web browser.
+Note: The service-version values will be synced to the kv-store and used to compute new routing weights for the associated load balancers. After modifying the service-version values, view the resulting changes in the consul UI (kv-store values) and the haproxy stats UI (computed routing weights for each load balancer). See the section "View Running Instances in a Web Browser" for how to access each UI in a web browser.
 
 **Option 1: Fork and commit (use if gonsul connects to a remote repo)**
 1. Fork the repo
