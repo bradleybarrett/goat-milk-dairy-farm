@@ -138,7 +138,7 @@ Existing load balancing implementations exhibit some combination of these elemen
         (Envoy side-car proxy deployed alongside each app instance; Istio control plane monitors the health of each instance-proxy pair)
 2. Populate routing rules
     - **Externally sourced rules**
-        (Istio control plane serves rules to Envoy side-cars through Envoy management API )
+        (Istio control plane serves rules to Envoy side-cars through Envoy management API)
 3. Location of load balancing decision
     - **Client-side (in side-car)**
         (Envoy side-car proxy routes traffic from the service)
