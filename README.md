@@ -134,14 +134,14 @@ Existing load balancing implementations exhibit some combination of these elemen
 
 #### Istio <a name="5-2"></a>
 1. Populate service registry
-    - **Simple orchestrator, smart clients**
-        (envoy side-cars register and report health to the management API, forming the data plane)
+    - **Smart orchestrator, simple clients**
+        (Envoy side-car proxy deployed alongside each app instance; Istio control plane monitors the health of each instance-proxy pair)
 2. Populate routing rules
     - **Externally sourced rules**
-        (envoy management API serves rules to Envoy side-cars through the control plane)
+        (Istio control plane serves rules to Envoy side-cars through Envoy management API )
 3. Location of load balancing decision
     - **Client-side (in side-car)**
-        (envoy side-car proxy routes traffic from the service)
+        (Envoy side-car proxy routes traffic from the service)
 
 #### Netflix Eureka + Ribbon <a name="5-3"></a>
 1. Populate service registry
