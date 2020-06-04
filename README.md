@@ -95,7 +95,7 @@ Load balancing implementations can be characterized by three key elements:
 2. Populating the routing rules
    * Which resource should be served next?
 3. Location of the load balancing decision
-   * Where is the load balancing decision made? (server-side or client side)
+   * Where is the load balancing decision made? (server-side or client-side)
 
 Implementation options for each load balancing element:
 
