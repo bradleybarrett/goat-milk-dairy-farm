@@ -100,9 +100,9 @@ Implementation options for each load balancing element:
 
 #### 1. Populating the service registry <a name="4-1"></a>
  * Smart orchestrator, simple clients
-     - orchestrator keeps track of where it deploys client apps and checks up on their health
+     - orchestrator keeps track of where it deploys client apps, checks up on their health, and updates the service registry
  * Simple orchestrator, smart clients
-     - orchestrator deploys and forgets, client apps routinely register themselves
+     - orchestrator deploys and forgets; client apps and the service registry monitor health and update registrations
 
 #### 2. Populating routing rules <a name="4-2"></a>
  * Locally sourced
