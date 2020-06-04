@@ -13,6 +13,7 @@
    * [Netflix Eureka + Ribbon](#5-3)
    * [HA-Proxy + Consul + consul-template (this project)](#5-4)
 * [Build and Run the Dairy Farm](#6)
+    * [System Requirements](#6-0)
     * [Build Images](#6-1)
     * [Set Environment Variables](#6-2)
     * [Gonsul Setup: Use a local file or Connect to a remote repo with ssh](#6-3)
@@ -167,6 +168,12 @@ Existing load balancing implementations exhibit some combination of these elemen
 
 
 ## Build and Run the Dairy Farm <a name="6"></a>
+
+#### 0. System Requirements <a name="6-0"></a>
+
+* Unix-based OS (for bash/shell scripts)
+* Docker
+* Java (version between 8 and 14 inclusive).
 
 #### 1. Build Images <a name="6-1"></a>
 
