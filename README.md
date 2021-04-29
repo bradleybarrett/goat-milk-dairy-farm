@@ -284,7 +284,10 @@ http://localhost:8414/monitor
 
 Note: The service-version values will be synced to the kv-store and used to compute new routing weights for the associated load balancers. After modifying the service-version values, view the resulting changes in the consul UI (kv-store values) and the haproxy stats UI (computed routing weights for each load balancer). See the section "View Running Instances in a Web Browser" for how to access each UI in a web browser.
 
-**Option 1: Fork and commit (use if gonsul connects to a remote repo)**
+**Option 1: Modify the local file (use if gonsul reads a local directory)**
+1. Edit values in ./loadbalancer/kvstore/farmer.json or ./loadbalancer/kvstore/goat.json
+
+**Option 2: Fork and commit (use if gonsul connects to a remote repo)**
 1. Fork the repo
 2. Update the CONFIG_REPO_URL in ./loadbalancer/.env to the ssh url of your fork
 3. Stop and restart gonsul with the new config
@@ -296,6 +299,3 @@ $ cd loadbalancer && ./run.sh -d gonsul && cd ..
 5. Edit values in ./loadbalancer/kvstore/farmer.json or ./loadbalancer/kvstore/goat.json
 6. Commit and push the change to the master branch of the fork
 7. Repeat steps 5 and 6 for subsequent changes 
-
-**Option 2: Modify the local file (use if gonsul reads a local directory)**
-1. Edit values in ./loadbalancer/kvstore/farmer.json or ./loadbalancer/kvstore/goat.json
