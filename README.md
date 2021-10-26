@@ -32,9 +32,9 @@
 
 The goal of this project was to learn more about load balancing tools for rolling deployments (blue-green and canary).
 
-The project implements a dairy farm that produces bottles of milk. Each incoming request for milk is a received by a farmer, who milks a goat, then returns a milk bottle labeled with the farmer and goat who serviced the request. 
+The project implements a dairy farm that produces bottles of milk. Each incoming request for milk is received by a farmer, who milks a goat, then returns a milk bottle labeled with the farmer and goat that serviced the request. 
 
-These labels are important because they change as milk requests are loadbalanced across the farmers and goats. Also, "Goat Milk?" Dairy Farm, is all about that farm-to-table.
+These labels are important because they change as milk requests are loadbalanced across the various farmer and goat instances. Also, "Goat Milk?" Dairy Farm, is all about that farm-to-table.
 
 The diary farm has multiple instances of farmers and goats, each with a service name and version number. Ex: farmer-v1, goat-v1, goat-v2. 
 
