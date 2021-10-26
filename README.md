@@ -34,7 +34,7 @@ The goal of this project was to learn more about load balancing tools for rollin
 
 The project implements a dairy farm that produces bottles of milk. Each incoming request for milk is received by a farmer, who milks a goat, then returns a milk bottle labeled with the farmer and goat that serviced the request. 
 
-These labels are important because they change as milk requests are loadbalanced across the various farmer and goat instances. Also, "Goat Milk?" Dairy Farm, is all about that farm-to-table.
+The labels on each milk bottle will change as requests are loadbalanced across the various farmer and goat instances. The labels are also important because the "Goat Milk?" Dairy Farm brand is all about that farm-to-table.
 
 The diary farm has multiple instances of farmers and goats, each with a service name and version number. Ex: farmer-v1, goat-v1, goat-v2. 
 
@@ -57,10 +57,10 @@ Check out the section on "Deployment Pipeline Features" to see what's included i
 * HA-Proxy load balancers access information in consul and populate routing rules using consul-template.
 * Traffic weights are stored in a git repository and synced to the consul kv-store in real-time using gonsul.
 * HA-Proxy hot reload and consul-template polling allow routing rules to be updated automatically without dropping existing traffic.
-* Registration side-car containers register each load balancer with consul. As a result, the load balancer address is flexible and client-side load balancing can be implemented to support redundant load balncers for each service.
+* Side-car containers register each load balancer with consul. As a result, the load balancer address is flexible and client-side load balancing can be implemented to support redundant load balncers for each service.
 * This load balancing implementation attempts to externalize all routing logic from the application services (hence the use of server-side load balancing).
 
-Note: There a pros and cons to each load balancing implementation pattern. See the section "Load Balancing Implementation Patterns" for the key elements of load balancing, examples from well-known tools, and the pattern used by this dairy farm.
+Note: There are pros and cons to each load balancing implementation pattern. See the section "Load Balancing Implementation Patterns" for the key elements of load balancing, examples from well-known tools, and the pattern used by this dairy farm.
 
 ## Deployment Pipeline Features <a name="3"></a>
 
